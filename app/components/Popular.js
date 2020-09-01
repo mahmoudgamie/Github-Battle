@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes  from 'prop-types'
+import { fetchPopularRepos } from '../utils/api'
 
 function LanguagesNav ({selected, onUpdateLanguage}) {
   const languages = ['All', 'JavaScript', 'Ruby', 'CSS', 'Python'];
@@ -27,18 +28,58 @@ export default class Popular extends React.Component {
     super(props)
 
     this.state = {
-      selectedLanguage: 'All'
+      selectedLanguage: 'All',
+      repos: {},
+      error: null,
     }
     this.updateLanguage = this.updateLanguage.bind(this)
+    this.isLoading = this.isLoading.bind(this)
+  }
+
+  componentDidMount() {
+    this.updateLanguage(this.state.selectedLanguage);
   }
 
   updateLanguage(selectedLanguage){
-    this.setState({selectedLanguage})
+    this.setState({
+      selectedLanguage,
+      error: null,
+    })
+
+    if(!this.state.repos[selectedLanguage]){
+
+      fetchPopularRepos(selectedLanguage)
+        .then( data => {
+          console.log('INSIDEEE')
+          this.setState(({ repos }) => ({
+            repos: {
+              ...repos,
+              [selectedLanguage]: data
+            }
+          }))
+        }).catch(() => {
+        console.warn('Error fetching repos: ', error)
+        this.setState({
+          error: 'There was an error fetching the repositories!'
+        })
+      })
+    }
+  }
+  isLoading(){
+    const {selectedLanguage, repos, error} = this.state
+    return !repos[selectedLanguage] && error === null;
   }
   render(){
-    const selectedLanguage = this.state.selectedLanguage
+
+    const {selectedLanguage, repos, error} = this.state
+    console.log(repos)
     return (
-      <LanguagesNav selected={this.state.selectedLanguage} onUpdateLanguage={this.updateLanguage}/>
+      <React.Fragment>
+        <LanguagesNav selected={this.state.selectedLanguage} onUpdateLanguage={this.updateLanguage}/>
+        {this.isLoading() && <p>LOADING</p>}
+        {error && <p>{error}</p>}
+        {repos[selectedLanguage] && <pre>{JSON.stringify(repos[selectedLanguage], null, 2)}</pre>}
+      </React.Fragment>
     )
   }
 }
